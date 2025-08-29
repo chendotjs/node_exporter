@@ -25,6 +25,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const extraLabelKey = "extra_label"
+
+var ExtraLabelReplicas int
+
 // Namespace defines the common namespace to be used by all metrics.
 const namespace = "node"
 

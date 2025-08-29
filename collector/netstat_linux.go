@@ -89,14 +89,17 @@ func (c *netStatCollector) Update(ch chan<- prometheus.Metric) error {
 			if !c.fieldPattern.MatchString(key) {
 				continue
 			}
-			ch <- prometheus.MustNewConstMetric(
-				prometheus.NewDesc(
-					prometheus.BuildFQName(namespace, netStatsSubsystem, key),
-					fmt.Sprintf("Statistic %s.", protocol+name),
-					nil, nil,
-				),
-				prometheus.UntypedValue, v,
-			)
+			for e := 0; e < ExtraLabelReplicas; e++ {
+
+				ch <- prometheus.MustNewConstMetric(
+					prometheus.NewDesc(
+						prometheus.BuildFQName(namespace, netStatsSubsystem, key),
+						fmt.Sprintf("Statistic %s.", protocol+name),
+						[]string{extraLabelKey}, nil,
+					),
+					prometheus.UntypedValue, v, strconv.Itoa(e),
+				)
+			}
 		}
 	}
 	return nil

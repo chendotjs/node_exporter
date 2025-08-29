@@ -23,6 +23,7 @@ import (
 	"runtime"
 	"slices"
 	"sort"
+	"strconv"
 
 	"github.com/prometheus/common/promslog"
 	"github.com/prometheus/common/promslog/flag"
@@ -76,6 +77,23 @@ func newHandler(includeExporterMetrics bool, maxRequests int, logger *slog.Logge
 
 // ServeHTTP implements http.Handler.
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// https://victoriametrics.com/blog/benchmark-100m/
+	// How to generate benchmark data. curl -s "http://127.0.0.1:9100/metrics?replicas=500" | wc -c | awk '{printf "%.2f MB\n",$1/1024/1024}'
+	var (
+		err error
+	)
+	extraLabelReplicasParam := r.URL.Query().Get("replicas")
+	if extraLabelReplicasParam == "" {
+		extraLabelReplicasParam = "1"
+	}
+
+	h.logger.Info("replicas query:", "replicas", extraLabelReplicasParam)
+
+	collector.ExtraLabelReplicas, err = strconv.Atoi(extraLabelReplicasParam)
+	if err != nil {
+		h.logger.Warn("Couldn't create filtered metrics handler:", "err", err)
+	}
+
 	collects := r.URL.Query()["collect[]"]
 	h.logger.Debug("collect query:", "collects", collects)
 

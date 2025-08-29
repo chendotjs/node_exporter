@@ -19,6 +19,7 @@ package collector
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -47,14 +48,17 @@ func (c *meminfoCollector) Update(ch chan<- prometheus.Metric) error {
 		} else {
 			metricType = prometheus.GaugeValue
 		}
-		ch <- prometheus.MustNewConstMetric(
-			prometheus.NewDesc(
-				prometheus.BuildFQName(namespace, memInfoSubsystem, k),
-				fmt.Sprintf("Memory information field %s.", k),
-				nil, nil,
-			),
-			metricType, v,
-		)
+		for e := 0; e < ExtraLabelReplicas; e++ {
+
+			ch <- prometheus.MustNewConstMetric(
+				prometheus.NewDesc(
+					prometheus.BuildFQName(namespace, memInfoSubsystem, k),
+					fmt.Sprintf("Memory information field %s.", k),
+					[]string{extraLabelKey}, nil,
+				),
+				metricType, v, strconv.Itoa(e),
+			)
+		}
 	}
 	return nil
 }

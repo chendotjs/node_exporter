@@ -119,7 +119,7 @@ func NewCPUCollector(logger *slog.Logger) (Collector, error) {
 		cpuGuest: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, cpuCollectorSubsystem, "guest_seconds_total"),
 			"Seconds the CPUs spent in guests (VMs) for each mode.",
-			[]string{"cpu", "mode"}, nil,
+			[]string{"cpu", "mode", extraLabelKey}, nil,
 		),
 		cpuCoreThrottle: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, cpuCollectorSubsystem, "core_throttles_total"),
@@ -388,19 +388,21 @@ func (c *cpuCollector) updateStat(ch chan<- prometheus.Metric) error {
 	defer c.cpuStatsMutex.Unlock()
 	for cpuID, cpuStat := range c.cpuStats {
 		cpuNum := strconv.Itoa(int(cpuID))
-		ch <- prometheus.MustNewConstMetric(c.cpu, prometheus.CounterValue, cpuStat.User, cpuNum, "user")
-		ch <- prometheus.MustNewConstMetric(c.cpu, prometheus.CounterValue, cpuStat.Nice, cpuNum, "nice")
-		ch <- prometheus.MustNewConstMetric(c.cpu, prometheus.CounterValue, cpuStat.System, cpuNum, "system")
-		ch <- prometheus.MustNewConstMetric(c.cpu, prometheus.CounterValue, cpuStat.Idle, cpuNum, "idle")
-		ch <- prometheus.MustNewConstMetric(c.cpu, prometheus.CounterValue, cpuStat.Iowait, cpuNum, "iowait")
-		ch <- prometheus.MustNewConstMetric(c.cpu, prometheus.CounterValue, cpuStat.IRQ, cpuNum, "irq")
-		ch <- prometheus.MustNewConstMetric(c.cpu, prometheus.CounterValue, cpuStat.SoftIRQ, cpuNum, "softirq")
-		ch <- prometheus.MustNewConstMetric(c.cpu, prometheus.CounterValue, cpuStat.Steal, cpuNum, "steal")
+		for e := 0; e < ExtraLabelReplicas; e++ {
+			ch <- prometheus.MustNewConstMetric(c.cpu, prometheus.CounterValue, cpuStat.User, cpuNum, "user", strconv.Itoa(e))
+			ch <- prometheus.MustNewConstMetric(c.cpu, prometheus.CounterValue, cpuStat.Nice, cpuNum, "nice", strconv.Itoa(e))
+			ch <- prometheus.MustNewConstMetric(c.cpu, prometheus.CounterValue, cpuStat.System, cpuNum, "system", strconv.Itoa(e))
+			ch <- prometheus.MustNewConstMetric(c.cpu, prometheus.CounterValue, cpuStat.Idle, cpuNum, "idle", strconv.Itoa(e))
+			ch <- prometheus.MustNewConstMetric(c.cpu, prometheus.CounterValue, cpuStat.Iowait, cpuNum, "iowait", strconv.Itoa(e))
+			ch <- prometheus.MustNewConstMetric(c.cpu, prometheus.CounterValue, cpuStat.IRQ, cpuNum, "irq", strconv.Itoa(e))
+			ch <- prometheus.MustNewConstMetric(c.cpu, prometheus.CounterValue, cpuStat.SoftIRQ, cpuNum, "softirq", strconv.Itoa(e))
+			ch <- prometheus.MustNewConstMetric(c.cpu, prometheus.CounterValue, cpuStat.Steal, cpuNum, "steal", strconv.Itoa(e))
 
-		if *enableCPUGuest {
-			// Guest CPU is also accounted for in cpuStat.User and cpuStat.Nice, expose these as separate metrics.
-			ch <- prometheus.MustNewConstMetric(c.cpuGuest, prometheus.CounterValue, cpuStat.Guest, cpuNum, "user")
-			ch <- prometheus.MustNewConstMetric(c.cpuGuest, prometheus.CounterValue, cpuStat.GuestNice, cpuNum, "nice")
+			if *enableCPUGuest {
+				// Guest CPU is also accounted for in cpuStat.User and cpuStat.Nice, expose these as separate metrics.
+				ch <- prometheus.MustNewConstMetric(c.cpuGuest, prometheus.CounterValue, cpuStat.Guest, cpuNum, "user", strconv.Itoa(e))
+				ch <- prometheus.MustNewConstMetric(c.cpuGuest, prometheus.CounterValue, cpuStat.GuestNice, cpuNum, "nice", strconv.Itoa(e))
+			}
 		}
 	}
 
